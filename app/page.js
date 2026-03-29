@@ -1,4 +1,4 @@
-import FloorMap from "@/files (4)/FloorMap";
+import FloorMap from "@/components/FloorMap";
 
 export const metadata = {
   title: "Comipara 6 — Floor Map",
