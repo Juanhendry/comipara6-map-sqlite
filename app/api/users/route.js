@@ -1,6 +1,7 @@
 import { getUsers, saveUsers } from "@/lib/dataStore";
 import { getCatalog } from "@/lib/dataStore";
 import { getPrices } from "@/lib/dataStore";
+import { withSanitization } from "@/lib/security";
 
 // GET /api/users — returns all users (without passwords for public, with passwords for admin)
 export async function GET(request) {
@@ -19,7 +20,7 @@ export async function GET(request) {
 }
 
 // POST /api/users — add a new user
-export async function POST(request) {
+async function RawPOST(request) {
   const body = await request.json();
   const users = getUsers();
   const newUser = { id: Date.now() + Math.random(), ...body, booths: body.booths || [], fandoms: body.fandoms || [] };
@@ -27,15 +28,17 @@ export async function POST(request) {
   saveUsers(users);
   return Response.json(newUser, { status: 201 });
 }
+export const POST = withSanitization(RawPOST);
 
 // PUT /api/users — update a user
-export async function PUT(request) {
+async function RawPUT(request) {
   const body = await request.json();
   let users = getUsers();
   users = users.map(u => u.id === body.id ? { ...u, ...body } : u);
   saveUsers(users);
   return Response.json({ ok: true });
 }
+export const PUT = withSanitization(RawPUT);
 
 // DELETE /api/users — delete a user
 export async function DELETE(request) {

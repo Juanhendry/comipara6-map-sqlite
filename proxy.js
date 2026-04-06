@@ -1,0 +1,43 @@
+import { NextResponse } from "next/server";
+
+const rateLimitMap = new Map();
+
+export function proxy(request) {
+  const { pathname } = request.nextUrl;
+  const response = NextResponse.next();
+
+  if (pathname.startsWith("/api/")) {
+    const ip = request.ip || request.headers.get("x-forwarded-for") || "unknown";
+    const limit = 100;
+    const windowMs = 60 * 1000;
+    const now = Date.now();
+    
+    let record = rateLimitMap.get(ip);
+    if (!record || now > record.resetTime) {
+      record = { count: 1, resetTime: now + windowMs };
+    } else {
+      record.count++;
+    }
+    
+    if (rateLimitMap.size > 10000) rateLimitMap.clear();
+    rateLimitMap.set(ip, record);
+
+    if (record.count > limit) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+
+    const allowedOrigin = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "*";
+    if (allowedOrigin !== "*") {
+      response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-cp6-session");
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+    }
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: ["/(.*)"],
+};
